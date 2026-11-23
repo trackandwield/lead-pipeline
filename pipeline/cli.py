@@ -91,6 +91,23 @@ def cmd_ledger_verify(args) -> int:
     return 1 if broken else 0
 
 
+def cmd_intake_test(args) -> int:
+    """Send a fake HubSpot form fill through n8n (or straight to the API with --direct)."""
+    import httpx
+
+    from pipeline.intake import sample_payload
+    config.load_env()
+    url = args.url or (f"{_ledger_url(args)}/intake/hubspot" if args.direct else
+                       os.environ.get("N8N_INTAKE_WEBHOOK",
+                                      "http://localhost:5678/webhook/hubspot-intake"))
+    body = sample_payload(args.n)
+    r = httpx.post(url, json=body, timeout=30,
+                   headers={"X-Intake-Key": os.environ.get("INTAKE_SHARED_SECRET", "")})
+    print(f"POST {url} -> {r.status_code}")
+    print(r.text[:1000])
+    return 0 if r.status_code < 300 else 1
+
+
 def cmd_check(args) -> int:
     """Check each connection in .env without printing any secret."""
     config.load_env()
@@ -167,6 +184,12 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--account", action="append", help="one account (repeatable)")
     s.add_argument("--url", default=None)
     s.set_defaults(fn=cmd_ledger_verify)
+
+    s = sub.add_parser("intake-test", help="send a fake HubSpot form fill through intake")
+    s.add_argument("--n", type=int, default=1, help="which fake person (same n = same person)")
+    s.add_argument("--direct", action="store_true", help="skip n8n, call the API")
+    s.add_argument("--url", default=None)
+    s.set_defaults(fn=cmd_intake_test)
 
     s = sub.add_parser("check", help="test the HubSpot and Salesforce connections")
     s.set_defaults(fn=cmd_check)

@@ -16,5 +16,36 @@ services:
       interval: 5s
       retries: 10
 
+  n8n:
+    # Self-hosted n8n (free). Editor at http://localhost:5678
+    image: docker.n8n.io/n8nio/n8n:latest
+    ports:
+      - "5678:5678"
+    environment:
+      GENERIC_TIMEZONE: America/Los_Angeles
+      # The workflows read PIPELINE_API_URL from here.
+      N8N_BLOCK_ENV_ACCESS_IN_NODE: "false"
+      # The pipeline API (python -m pipeline ledger-serve) runs on your machine, not in Docker.
+      PIPELINE_API_URL: http://host.docker.internal:8800
+      # Set N8N_PUBLIC_URL in .env to the tunnel URL so n8n shows the right webhook links.
+      WEBHOOK_URL: ${N8N_PUBLIC_URL:-http://localhost:5678/}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - n8n-data:/home/node/.n8n
+      - ./n8n/workflows:/workflows:ro
+
+  tunnel:
+    # A free Cloudflare quick tunnel so HubSpot can reach n8n. Start it with:
+    #   docker compose --profile tunnel up -d
+    # and find the https://....trycloudflare.com URL in: docker compose logs tunnel
+    # The URL changes each time the tunnel restarts.
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --url http://n8n:5678
+    profiles: ["tunnel"]
+    depends_on:
+      - n8n
+
 volumes:
   ledger-data:
+  n8n-data:

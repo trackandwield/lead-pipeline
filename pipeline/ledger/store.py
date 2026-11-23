@@ -153,6 +153,11 @@ class LedgerStore:
             out.append(v)
         return out
 
+    def find_by_key(self, key: str) -> dict | None:
+        """The event written with this idempotency key, if any."""
+        rec = self._by_key(key)
+        return self._view([rec])[0] if rec else None
+
     def get(self, event_id: str) -> dict:
         recs = self._records(event_ids=[event_id])
         if not recs:
@@ -163,7 +168,7 @@ class LedgerStore:
         recs = self._records(account_id=account_id)
         if include_system:
             recs += self._records(chain=SYSTEM_CHAIN)
-        recs.sort(key=lambda r: (r["occurred_at"], r["event_id"]))
+        recs.sort(key=lambda r: (r["occurred_at"], r["chain"], r["seq"]))
         return self._view(recs)
 
     def get_content(self, content_id: str) -> dict:

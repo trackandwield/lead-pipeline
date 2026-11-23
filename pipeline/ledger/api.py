@@ -13,7 +13,7 @@ from pipeline.ledger.store import LedgerError, LedgerStore, NotFound
 
 
 def create_app(store: LedgerStore) -> FastAPI:
-    app = FastAPI(title="Lumenvale customer ledger", version="0.1.0",
+    app = FastAPI(title="Lumenvale pipeline API: customer ledger and intake", version="0.1.0",
                   description="Append-only, hash-chained timeline of every customer interaction.")
 
     def _call(fn, *a, **kw):
@@ -73,6 +73,8 @@ def create_app(store: LedgerStore) -> FastAPI:
     def erasure(req: ErasureIn):
         return _call(store.erase_person, req)
 
+    from pipeline.intake import router as intake_router
+    app.include_router(intake_router(store))
     return app
 
 
