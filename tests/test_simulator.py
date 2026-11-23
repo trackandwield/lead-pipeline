@@ -13,7 +13,9 @@ def test_count_weeks_and_fictional_domains():
     leads = generate(n=120, weeks=12)
     assert len(leads) == 120
     assert {lead.week for lead in leads} == set(range(12))
-    assert all(lead.email.endswith(".example") for lead in leads)
+    # RFC 2606 reserves example.com and its subdomains; HubSpot rejects a bare .example TLD.
+    assert all(lead.email.endswith(".example.com") for lead in leads)
+    assert all(lead.domain.endswith(".example.com") for lead in leads)
 
 
 def test_hidden_truth_is_kept_out_of_visible_fields():

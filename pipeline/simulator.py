@@ -141,7 +141,7 @@ def _company(fake: Faker, rng: random.Random, n: int, *, looks_ideal: bool = Fal
             "aws_or_gcp": rng.random() < (0.85 if cloudy else 0.4),
         }
     return {"company_id": f"acc_{n:05d}", "company_name": name,
-            "domain": f"{_slug(name)}.example", "employees": employees,
+            "domain": f"{_slug(name)}.example.com", "employees": employees,
             "industry": industry, "tech": tech}
 
 
@@ -172,7 +172,7 @@ def generate(n: int = 200, weeks: int = 12, seed: int = 7,
         first, last = fake.first_name(), fake.last_name()
         personal = rng.random() < 0.12
         student = role == "unrelated" and rng.random() < 0.3
-        email_domain = "mail.example" if personal else company["domain"]
+        email_domain = "mail.example.com" if personal else company["domain"]
         lead = Lead(
             lead_id=f"lead_{i:05d}",
             created_on=(START_DATE + timedelta(days=week * 7 + rng.randint(0, 4))).isoformat(),
