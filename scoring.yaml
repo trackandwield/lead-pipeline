@@ -1,0 +1,72 @@
+# Scoring model for Lumenvale (a fictional company). Component 1 of the lead pipeline.
+# The scoring service reads this file. The closed-loop controller only changes the
+# values under `thresholds`, inside the limits under `controller`.
+version: 1
+seller: Lumenvale (fictional observability SaaS)
+
+fit:            # max 60 points
+  employees:
+    - {min: 1,     max: 49,    points: 0}
+    - {min: 50,    max: 199,   points: 12}
+    - {min: 200,   max: 2000,  points: 20}   # sweet spot
+    - {min: 2001,  max: 10000, points: 14}
+    - {min: 10001, max: null,  points: 6}
+  industry:
+    core: {points: 10, values: [b2b_saas, fintech, ecommerce, healthtech]}
+    adjacent: {points: 5, values: [media, logistics, gaming, edtech]}
+  tech_stack:    # summed, capped
+    cap: 15
+    signals:
+      kubernetes: 8
+      opentelemetry: 6
+      competitor_tool: 6     # Datadog, New Relic, Splunk, Dynatrace in use
+      aws_or_gcp: 3
+  persona:       # judged by the LLM from job title + company context
+    economic_buyer: 15       # VP Engineering, CTO, Head of Platform
+    champion: 12             # SRE lead, platform or DevOps manager
+    user: 6                  # SRE, backend or platform engineer
+    unrelated: 0             # marketing, HR, sales, students
+
+intent:         # max 40 points, counts signals from the last 30 days
+  cap: 40
+  form_type:
+    demo_request: 20
+    pricing_contact: 15
+    trial_signup: 15
+    webinar: 6
+    ebook: 4
+    newsletter: 1
+  behavior:
+    pricing_page_visits_2plus: 8
+    docs_visits_3plus: 6
+    trial_sent_data: 10
+
+penalties:
+  personal_email_domain: -10
+  student_or_job_seeker: -30
+disqualify:
+  - competitor_domain
+  - employees_under: 10
+
+thresholds:     # the actuator; the controller moves these
+  hot: 70       # Hot  = score >= hot
+  warm: 45      # Warm = warm <= score < hot; MQL = Warm or Hot
+
+setpoints:      # target MQL-to-SQL conversion per tier, rolling 4 weeks
+  hot:  {low: 0.45, high: 0.65}
+  warm: {low: 0.15, high: 0.30}
+  nurture_missed_max: 0.03   # Nurture leads that later become SQL
+
+controller:
+  mode: approval             # approval | autonomous
+  fast_loop: {cadence: weekly, window_weeks: 4}
+  max_step: 3                # points per threshold per week
+  min_mqls_per_tier: 30      # no change on less data than this
+  limits:
+    hot:  {floor: 60, ceiling: 85}
+    warm: {floor: 35, ceiling: 60}
+    min_gap_hot_warm: 10
+  slow_loop:
+    cadence: monthly
+    max_weight_change: 0.20  # suggest at most +/-20% per signal weight
+    apply: suggest_only      # always needs a human

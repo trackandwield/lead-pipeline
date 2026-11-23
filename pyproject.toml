@@ -1,0 +1,17 @@
+[project]
+name = "lead-pipeline"
+version = "0.1.0"
+description = "HubSpot + Salesforce + n8n lead pipeline with closed-loop scoring and an auditable customer ledger"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "pyyaml>=6.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
