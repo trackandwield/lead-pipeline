@@ -1,6 +1,6 @@
 # Customer ledger and context agent: design
 
-Status: **draft**, 2026-11-23. Goal: a record that follows each customer from the first interaction through the whole lifecycle, which anyone at the company can audit. This repo builds it. Later portfolio projects (warehouse and attribution, customer journey agent, website analytics, journey tools) read it and add to it.
+Status: **v1 built** (component 3), 2026-11-23. The living doc "Customer journey context: what the ledger tracks" tracks which event types are live. Goal: a record that follows each customer from the first interaction through the whole lifecycle, which anyone at the company can audit. This repo builds it. Later portfolio projects (warehouse and attribution, customer journey agent, website analytics, journey tools) read it and add to it.
 
 ## In one paragraph
 
@@ -37,7 +37,17 @@ Every system that touches a customer writes a short, structured **event** to one
 | `prev_hash`, `hash` | SHA-256 | A hash chain per account, so any edit after the fact is detectable |
 
 **Starting event types (this repo):** `web_visit` (from project 13), `form_submitted`, `identity_linked`, `enriched`, `lead_scored`, `routed`, `slack_alert_sent`, `stage_changed`, `crm_synced`, `sdr_accepted`, `sdr_rejected`, `opportunity_created`, `closed_won`, `closed_lost`, `threshold_changed` (account-free, system level), `brief_updated`, `agent_answered`, `correction`.
+**Added in catalog v2:** `drift_alert` (system level), the communications types below, and `pii_erased` (the erasure itself is logged).
+
 Later projects add types (for example `onboarding_started`, `ticket_opened`, `usage_milestone`, `renewal_signed`, `churned`, `audience_joined`) by adding to the versioned list. No project changes an existing type.
+
+## Communications and campaigns
+
+Everything that touches the customer lands on the same timeline: `campaign_touched`, `email_sent`, `email_received`, `message_thread`, `meeting_held`, `commitment_made` (a promise found in an email or meeting, linked to the quote) and `content_indexed`.
+
+The event holds a one-line summary. The full text (email body, thread, transcript, asset) goes to the **content store** (`POST /content`) and is attached to the event by ID. The event records the content's SHA-256, so the hash chain also proves the content wasn't changed.
+
+**Search, not a separate RAG database (decision 2026-11-23).** Most questions are about one customer, and the agent pulls that customer's timeline first; for most accounts it fits in the context window. Postgres full-text search covers events and content now (`GET /search`). The database image already includes pgvector, so when a large account's content outgrows the context window, or for questions across customers, embeddings go into the same tables and `content_indexed` records which model indexed what.
 
 ## Rules
 
@@ -52,8 +62,8 @@ Later projects add types (for example `onboarding_started`, `ticket_opened`, `us
 
 | Part | What it is | Component |
 | --- | --- | --- |
-| Ledger store | Postgres in Docker, next to n8n. The same schema moves to Supabase for project 11 | 3 |
-| Ledger API | FastAPI: `POST /events`, `GET /customers/{id}/timeline`, `GET /events/{id}`, `GET /verify/{account}` (checks the hash chain) | 3 |
+| Ledger store | Postgres 16 + pgvector in Docker (`docker-compose.yml`). Triggers refuse UPDATE, DELETE and TRUNCATE on events and content. Raw PII and content bodies sit in side tables, the only rows an erasure deletes. The same schema moves to Supabase for project 11 | 3 |
+| Ledger API | FastAPI (`pipeline/ledger/`): `POST /events`, `GET /events/{id}`, `GET /customers/{id}/timeline`, `GET /verify/{account}`, `POST /content`, `GET /content/{id}`, `GET /search`, `POST /erasure`, `GET /catalog`. Writers can send an `idempotency_key` so retries don't duplicate events | 3 |
 | Writers | Each workflow and service from component 4 on writes its events. The simulator writes post-sale events (onboarding, tickets, renewal or churn) so the demo shows a full lifecycle | 3 to 10 |
 | Audit view | A web page per customer: a timeline grouped by stage, filters by actor kind and system, expandable "why" (reason + inputs), a PII mask for restricted roles, and export | 11 |
 | Context agent | Claude with read-only tools (`get_timeline`, `search_events`, `get_event`). It keeps a brief per customer (stage, people, what was promised, open risks), answers questions with event citations, and says when the ledger doesn't hold the answer | 11 |

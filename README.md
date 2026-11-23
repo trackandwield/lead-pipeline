@@ -2,7 +2,7 @@
 
 Lead pipeline across HubSpot, Salesforce and n8n: enrich, score with rules plus Claude, and route in under a minute. Sales outcomes retune the score thresholds through a closed control loop. Every step goes to an auditable customer ledger. Synthetic data, built with Claude Code.
 
-> **Status:** early. The scoring model and the customer ledger design are drafted; code lands component by component.
+> **Status:** early. The simulator, the HubSpot and Salesforce sandbox, and the customer ledger are built; the rest lands component by component.
 
 ## What it does
 
@@ -32,6 +32,20 @@ uv run python -m pipeline sim --drift-week 6   # same, with the bad lead source 
 uv run python -m pipeline hubspot-setup        # create the custom HubSpot properties
 uv run python -m pipeline hubspot-seed         # load the simulated leads into HubSpot
 ```
+
+### Customer ledger
+
+Needs Docker Desktop. Set `LEDGER_DATABASE_URL`, `LEDGER_URL` and `LEDGER_PII_SALT` in `.env` (see `.env.example`).
+
+```powershell
+docker compose up -d                           # Postgres for the ledger, on port 5433
+uv run python -m pipeline ledger-serve         # the ledger API; leave it running (docs: http://127.0.0.1:8800/docs)
+# in a second terminal:
+uv run python -m pipeline ledger-seed          # each simulated lead's first events
+uv run python -m pipeline ledger-verify        # check every account's hash chain
+```
+
+Open `http://127.0.0.1:8800/customers/acc_00007/timeline` to see one customer's timeline. To run the ledger tests against Postgres as well as in memory, set `LEDGER_TEST_DATABASE_URL` to a scratch database (the tests drop and recreate its tables).
 
 ## The simulator
 

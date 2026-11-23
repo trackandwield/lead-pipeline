@@ -53,6 +53,44 @@ def cmd_hubspot_seed(args) -> int:
     return 0
 
 
+def _ledger_url(args) -> str:
+    config.load_env()
+    return args.url or os.environ.get("LEDGER_URL") or "http://127.0.0.1:8800"
+
+
+def cmd_ledger_serve(args) -> int:
+    import uvicorn
+    uvicorn.run("pipeline.ledger.api:app_from_env", factory=True, host=args.host, port=args.port)
+    return 0
+
+
+def cmd_ledger_seed(args) -> int:
+    from pipeline.ledger.client import LedgerClient
+    from pipeline.ledger.seed import seed
+    leads = read_leads(Path(args.file))[: args.limit]
+    url = _ledger_url(args)
+    print(f"Writing pre-scoring events for {len(leads)} leads to the ledger at {url}...")
+    result = seed(leads, LedgerClient(url))
+    print(f"  {result['events']} events across {result['accounts']} accounts")
+    for t, n in sorted(result["by_type"].items()):
+        print(f"  {t}: {n}")
+    return 0
+
+
+def cmd_ledger_verify(args) -> int:
+    from pipeline.ledger.client import LedgerClient
+    client = LedgerClient(_ledger_url(args))
+    accounts = args.account or sorted({lead.company_id for lead in read_leads(Path(args.file))})
+    broken = []
+    for account in accounts:
+        r = client.verify(account)
+        if not r["ok"]:
+            broken.append(r)
+            print(f"[broken] {account}: {r['problem']} at {r['broken_at']}")
+    print(f"Verified {len(accounts) - len(broken)} of {len(accounts)} account chains")
+    return 1 if broken else 0
+
+
 def cmd_check(args) -> int:
     """Check each connection in .env without printing any secret."""
     config.load_env()
@@ -78,8 +116,15 @@ def cmd_check(args) -> int:
         return Salesforce(os.environ["SF_DOMAIN"], os.environ["SF_CLIENT_ID"],
                           os.environ["SF_CLIENT_SECRET"]).ping()
 
+    def ledger():
+        from pipeline.ledger.client import LedgerClient
+        r = LedgerClient(os.environ["LEDGER_URL"]).http.get("/health")
+        r.raise_for_status()
+        return "ok (API reachable)"
+
     report("HubSpot", hubspot, ["HUBSPOT_ACCESS_TOKEN"])
     report("Salesforce", salesforce, ["SF_DOMAIN", "SF_CLIENT_ID", "SF_CLIENT_SECRET"])
+    report("Ledger", ledger, ["LEDGER_URL"])
     for name in ("ANTHROPIC_API_KEY", "SLACK_WEBHOOK_LEAD_ALERTS", "SLACK_WEBHOOK_PIPELINE_HEALTH"):
         print(f"[{'set' if os.environ.get(name) else 'skip'}]  {name}")
     return 0 if ok else 1
@@ -105,6 +150,23 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--file", default=str(DEFAULT_SIM))
     s.add_argument("--limit", type=int, default=200)
     s.set_defaults(fn=cmd_hubspot_seed)
+
+    s = sub.add_parser("ledger-serve", help="run the customer ledger API")
+    s.add_argument("--host", default="127.0.0.1")
+    s.add_argument("--port", type=int, default=8800)
+    s.set_defaults(fn=cmd_ledger_serve)
+
+    s = sub.add_parser("ledger-seed", help="write the simulated leads' first events")
+    s.add_argument("--file", default=str(DEFAULT_SIM))
+    s.add_argument("--limit", type=int, default=200)
+    s.add_argument("--url", default=None)
+    s.set_defaults(fn=cmd_ledger_seed)
+
+    s = sub.add_parser("ledger-verify", help="check every account's hash chain")
+    s.add_argument("--file", default=str(DEFAULT_SIM))
+    s.add_argument("--account", action="append", help="one account (repeatable)")
+    s.add_argument("--url", default=None)
+    s.set_defaults(fn=cmd_ledger_verify)
 
     s = sub.add_parser("check", help="test the HubSpot and Salesforce connections")
     s.set_defaults(fn=cmd_check)
