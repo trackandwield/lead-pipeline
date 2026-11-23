@@ -19,16 +19,23 @@ The seller, **Lumenvale**, is fictional, and all leads are synthetic.
 - [Scoring spec](docs/scoring-spec.md): ICP, points, tiers and the loop's setpoints (machine-readable copy: [`scoring.yaml`](scoring.yaml))
 - [Customer ledger design](docs/customer-ledger.md): event schema, rules, and how other projects plug in
 
-## Run the checks
+## Setup
+
+Copy `.env.example` to `.env` and fill it in. You need a HubSpot developer test account with a service key, a Salesforce Developer Edition org with an External Client App, a Slack workspace, n8n in Docker, and an Anthropic API key.
 
 ```powershell
 uv sync
-uv run pytest
+uv run pytest                                  # offline tests
+uv run python -m pipeline check                # test the HubSpot and Salesforce connections
+uv run python -m pipeline sim                  # 200 synthetic leads + outcomes into data/sim/
+uv run python -m pipeline sim --drift-week 6   # same, with the bad lead source from week 6
+uv run python -m pipeline hubspot-setup        # create the custom HubSpot properties
+uv run python -m pipeline hubspot-seed         # load the simulated leads into HubSpot
 ```
 
-## Setup
+## The simulator
 
-Copy `.env.example` to `.env` and fill it in. You need a HubSpot developer test account, a Salesforce Developer Edition org, a Slack workspace, n8n in Docker, and an Anthropic API key.
+Each lead has a hidden `true_quality` (0 to 1) that the scorer never sees, and sales outcomes are drawn from it. That makes it possible to measure how well the visible signals predict what sales does. `--drift-week` adds a `partner_list_b` source whose leads look like a good fit on paper but convert poorly: the disturbance the closed loop and the control chart must catch. Only visible fields are sent to HubSpot.
 
 ## Built with Claude Code
 
