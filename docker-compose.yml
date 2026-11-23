@@ -1,0 +1,20 @@
+# Local services. Start with: docker compose up -d
+services:
+  ledger-db:
+    # Postgres 16 with pgvector, so vector search can be added later without a new database.
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: ledger
+      POSTGRES_PASSWORD: ledger
+      POSTGRES_DB: ledger
+    ports:
+      - "5433:5432"   # 5433 on your machine, so it won't clash with another Postgres
+    volumes:
+      - ledger-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ledger"]
+      interval: 5s
+      retries: 10
+
+volumes:
+  ledger-data:
