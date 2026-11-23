@@ -221,3 +221,6 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Simulator output (regenerate with python -m pipeline sim)
+data/
