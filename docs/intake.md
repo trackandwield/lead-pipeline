@@ -24,13 +24,15 @@ n8n does the orchestration. The rules (validation, which account a person belong
 
 ## Run it
 
-1. Start the services: `docker compose up -d` (Postgres and n8n), then `uv run python -m pipeline ledger-serve` in its own window.
+1. Start the services: `docker compose up -d` (Postgres and n8n), then `uv run python -m pipeline ledger-serve --host 0.0.0.0` in its own window. n8n runs inside Docker, so the API has to listen beyond `127.0.0.1`; when Windows Firewall asks, allow private networks only.
 2. Open n8n at http://localhost:5678 and create the owner account (local only).
-3. Import the workflow: **Workflows > Create > ... menu > Import from file**, pick `n8n/workflows/lead-intake.json`, then switch it to **Active**.
+3. Import the workflow: **Workflows > Create > ... menu > Import from file**, pick `n8n/workflows/lead-intake.json`, then click **Publish** (older n8n versions: the **Active** toggle). Or from PowerShell: `docker compose exec n8n n8n import:workflow --input=/workflows/lead-intake.json`.
 4. Test without HubSpot: `uv run python -m pipeline intake-test` sends a fake form fill through n8n. `--direct` skips n8n, and `--n 2` sends a different fake person.
 5. Start the tunnel: `docker compose --profile tunnel up -d`, then `docker compose logs tunnel` and copy the `https://<words>.trycloudflare.com` URL. Put it in `.env` as `N8N_PUBLIC_URL` and run `docker compose up -d n8n` so n8n shows the right webhook URL. The URL changes whenever the tunnel restarts, so the HubSpot webhook URL has to be updated too.
 
-If n8n can't reach the API (connection refused in the n8n execution), run `ledger-serve --host 0.0.0.0` and allow it on private networks only when Windows Firewall asks.
+If intake-test returns 500 "Error in workflow", n8n couldn't reach the API: check that `ledger-serve` was started with `--host 0.0.0.0`.
+
+Before starting the tunnel, set `INTAKE_SHARED_SECRET` in `.env` and restart `ledger-serve`: the tunnel makes the webhook reachable from the internet.
 
 ## HubSpot setup (test account)
 
