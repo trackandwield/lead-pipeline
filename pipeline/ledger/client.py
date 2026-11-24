@@ -28,3 +28,9 @@ class LedgerClient:
 
     def verify(self, account_id: str) -> dict:
         return self._ok(self.http.get(f"/verify/{account_id}"))
+
+    def enrich(self, account_id: str, **body) -> dict:
+        return self._ok(self.http.post(f"/enrich/{account_id}", json=body))
+
+    def enrich_costs(self) -> dict:
+        return self._ok(self.http.get("/enrich/costs"))

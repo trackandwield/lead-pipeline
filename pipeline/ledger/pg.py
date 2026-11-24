@@ -116,14 +116,15 @@ class PostgresStore(LedgerStore):
                           "VALUES (%s,%s,%s)", (rec["event_id"], field, Jsonb(value)))
             return rec
 
-    def _records(self, *, chain=None, account_id=None, person_id=None, event_ids=None):
+    def _records(self, *, chain=None, account_id=None, person_id=None, event_ids=None,
+                 type=None):
         if event_ids is not None:
             rows = self._q("SELECT record FROM ledger_events WHERE event_id = ANY(%s)",
                            (event_ids,))
         else:
             where, params = [], []
             for col, val in (("chain", chain), ("account_id", account_id),
-                             ("person_id", person_id)):
+                             ("person_id", person_id), ("type", type)):
                 if val is not None:
                     where.append(f"{col} = %s")
                     params.append(val)

@@ -1,5 +1,5 @@
 {
-  "name": "Lead intake (HubSpot form to ledger)",
+  "name": "Lead intake (HubSpot form to ledger, then enrichment)",
   "nodes": [
     {
       "parameters": {
@@ -54,10 +54,35 @@
     },
     {
       "parameters": {
-        "respondWith": "json",
-        "responseBody": "={{ JSON.stringify($json.body) }}",
+        "method": "POST",
+        "url": "={{ $env.PIPELINE_API_URL }}/enrich/{{ $json.body.account_id }}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ ref: ($json.body.events || [])[0] }) }}",
         "options": {
-          "responseCode": "={{ $json.statusCode }}"
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "5c3e8a21-7b4d-4f9e-a2c6-0d1e9b7f3a05",
+      "name": "Enrich the account",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        520,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($('Record in customer ledger').item.json.body) }}",
+        "options": {
+          "responseCode": "={{ $('Record in customer ledger').item.json.statusCode }}"
         }
       },
       "id": "9e4d1b7a-3f2c-4a6e-8b5d-1c0f7e2a4d04",
@@ -65,7 +90,7 @@
       "type": "n8n-nodes-base.respondToWebhook",
       "typeVersion": 1.1,
       "position": [
-        520,
+        780,
         0
       ]
     }
@@ -83,6 +108,17 @@
       ]
     },
     "Record in customer ledger": {
+      "main": [
+        [
+          {
+            "node": "Enrich the account",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Enrich the account": {
       "main": [
         [
           {

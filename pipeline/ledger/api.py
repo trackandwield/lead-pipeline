@@ -6,13 +6,20 @@ from __future__ import annotations
 
 from fastapi import FastAPI, HTTPException, Query
 
-from pipeline.ledger.catalog import (CATALOG_VERSION, CONTENT_KINDS, DECISION_TYPES,
-                                     EVENT_TYPES, SCHEMA_VERSION, STAGES, SYSTEM_TYPES)
+from pipeline.ledger.catalog import (
+    CATALOG_VERSION,
+    CONTENT_KINDS,
+    DECISION_TYPES,
+    EVENT_TYPES,
+    SCHEMA_VERSION,
+    STAGES,
+    SYSTEM_TYPES,
+)
 from pipeline.ledger.model import ContentIn, ErasureIn, EventIn
 from pipeline.ledger.store import LedgerError, LedgerStore, NotFound
 
 
-def create_app(store: LedgerStore) -> FastAPI:
+def create_app(store: LedgerStore, provider=None) -> FastAPI:
     app = FastAPI(title="Lumenvale pipeline API: customer ledger and intake", version="0.1.0",
                   description="Append-only, hash-chained timeline of every customer interaction.")
 
@@ -75,6 +82,9 @@ def create_app(store: LedgerStore) -> FastAPI:
 
     from pipeline.intake import router as intake_router
     app.include_router(intake_router(store))
+    from pipeline.enrich import default_provider
+    from pipeline.enrich_api import router as enrich_router
+    app.include_router(enrich_router(store, provider or default_provider()))
     return app
 
 

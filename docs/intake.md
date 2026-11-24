@@ -7,7 +7,7 @@ HubSpot form -> HubSpot workflow ("Send a webhook") -> Cloudflare tunnel -> n8n 
   -> POST /intake/hubspot (pipeline API) -> ledger: form_submitted (+ stage_changed on the first fill)
 ```
 
-n8n does the orchestration. The rules (validation, which account a person belongs to, de-duplication) live in `pipeline/intake.py`, where they are tested. Later components add nodes to the same workflow: enrichment, scoring, the Slack alert.
+n8n does the orchestration. The rules (validation, which account a person belongs to, de-duplication) live in `pipeline/intake.py`, where they are tested. Later components add nodes to the same workflow. Enrichment ([enrichment.md](enrichment.md)) is the first; scoring and the Slack alert come next.
 
 ## What intake writes
 

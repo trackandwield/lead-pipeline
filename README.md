@@ -52,6 +52,10 @@ uv run python -m pipeline ledger-verify        # check every account's hash chai
 
 Open `http://127.0.0.1:8800/customers/acc_00007/timeline` to see one customer's timeline. To run the ledger tests against Postgres as well as in memory, set `LEDGER_TEST_DATABASE_URL` to a scratch database (the tests drop and recreate its tables).
 
+### Enrichment
+
+After intake, n8n calls `POST /enrich/{account_id}`, which writes an `enriched` event: company size, industry, funding stage and tech stack, each field with where it came from, plus the lookup's cost. Accounts enriched in the last 30 days come from the ledger instead of a new paid lookup. `uv run python -m pipeline enrich-backfill` enriches every simulated account; `enrich-costs` shows the running cost. See [docs/enrichment.md](docs/enrichment.md).
+
 ## The simulator
 
 Each lead has a hidden `true_quality` (0 to 1) that the scorer never sees, and sales outcomes are drawn from it. That makes it possible to measure how well the visible signals predict what sales does. `--drift-week` adds a `partner_list_b` source whose leads look like a good fit on paper but convert poorly: the disturbance the closed loop and the control chart must catch. Only visible fields are sent to HubSpot.
