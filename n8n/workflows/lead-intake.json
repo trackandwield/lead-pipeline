@@ -1,0 +1,104 @@
+{
+  "name": "Lead intake (HubSpot form to ledger)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "hubspot-intake",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "6f1b8a52-1c1e-4f7a-9a0e-3c5d2b7e9a01",
+      "name": "HubSpot form webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        0
+      ],
+      "webhookId": "8d0f6a3e-4b2c-4e1a-b7d9-2f5c8a1e6b02"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{ $env.PIPELINE_API_URL }}/intake/hubspot",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Intake-Key",
+              "value": "={{ $json.headers['x-intake-key'] || '' }}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true,
+              "neverError": true
+            }
+          }
+        }
+      },
+      "id": "2a7c9e14-5d3b-4c8f-a1e6-7b0d4f2c9e03",
+      "name": "Record in customer ledger",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        260,
+        0
+      ]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($json.body) }}",
+        "options": {
+          "responseCode": "={{ $json.statusCode }}"
+        }
+      },
+      "id": "9e4d1b7a-3f2c-4a6e-8b5d-1c0f7e2a4d04",
+      "name": "Reply to HubSpot",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        520,
+        0
+      ]
+    }
+  ],
+  "connections": {
+    "HubSpot form webhook": {
+      "main": [
+        [
+          {
+            "node": "Record in customer ledger",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Record in customer ledger": {
+      "main": [
+        [
+          {
+            "node": "Reply to HubSpot",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true
+  }
+}

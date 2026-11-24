@@ -2,7 +2,7 @@
 
 Lead pipeline across HubSpot, Salesforce and n8n: enrich, score with rules plus Claude, and route in under a minute. Sales outcomes retune the score thresholds through a closed control loop. Every step goes to an auditable customer ledger. Synthetic data, built with Claude Code.
 
-> **Status:** early. The simulator, the HubSpot and Salesforce sandbox, and the customer ledger are built; the rest lands component by component.
+> **Status:** early. The simulator, the HubSpot and Salesforce sandbox, the customer ledger and intake are built; the rest lands component by component.
 
 ## What it does
 
@@ -18,6 +18,7 @@ The seller, **Lumenvale**, is fictional, and all leads are synthetic.
 
 - [Scoring spec](docs/scoring-spec.md): ICP, points, tiers and the loop's setpoints (machine-readable copy: [`scoring.yaml`](scoring.yaml))
 - [Customer ledger design](docs/customer-ledger.md): event schema, rules, and how other projects plug in
+- [Intake](docs/intake.md): HubSpot form to n8n to the ledger, and how to set it up
 
 ## Setup
 
@@ -44,6 +45,10 @@ uv run python -m pipeline ledger-serve         # the ledger API; leave it runnin
 uv run python -m pipeline ledger-seed          # each simulated lead's first events
 uv run python -m pipeline ledger-verify        # check every account's hash chain
 ```
+
+### Intake (HubSpot form fill to the ledger)
+
+`docker compose up -d` also starts n8n at http://localhost:5678. Import `n8n/workflows/lead-intake.json`, activate it, and run `uv run python -m pipeline intake-test` to send a fake form fill through it. HubSpot and Cloudflare tunnel setup: [docs/intake.md](docs/intake.md).
 
 Open `http://127.0.0.1:8800/customers/acc_00007/timeline` to see one customer's timeline. To run the ledger tests against Postgres as well as in memory, set `LEDGER_TEST_DATABASE_URL` to a scratch database (the tests drop and recreate its tables).
 
