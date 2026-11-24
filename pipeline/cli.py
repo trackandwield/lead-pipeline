@@ -108,6 +108,27 @@ def cmd_intake_test(args) -> int:
     return 0 if r.status_code < 300 else 1
 
 
+def cmd_enrich_backfill(args) -> int:
+    """Enrich every simulated account (cached accounts are skipped and cost nothing)."""
+    from pipeline.ledger.client import LedgerClient
+    client = LedgerClient(_ledger_url(args))
+    accounts = sorted({lead.company_id for lead in read_leads(Path(args.file))[: args.limit]})
+    cached = 0
+    for account in accounts:
+        cached += client.enrich(account, force=args.force)["cached"]
+    print(f"Enriched {len(accounts) - cached} accounts, {cached} already cached")
+    return cmd_enrich_costs(args)
+
+
+def cmd_enrich_costs(args) -> int:
+    from pipeline.ledger.client import LedgerClient
+    c = LedgerClient(_ledger_url(args)).enrich_costs()
+    print(f"Lookups: {c['lookups']} across {c['accounts']} accounts, "
+          f"${c['cost_usd']:.2f} total, ${c['cost_per_account_usd']:.4f} per account, "
+          f"{c['no_company_data']} with no company data")
+    return 0
+
+
 def cmd_check(args) -> int:
     """Check each connection in .env without printing any secret."""
     config.load_env()
@@ -190,6 +211,17 @@ def main(argv: list[str] | None = None) -> int:
     s.add_argument("--direct", action="store_true", help="skip n8n, call the API")
     s.add_argument("--url", default=None)
     s.set_defaults(fn=cmd_intake_test)
+
+    s = sub.add_parser("enrich-backfill", help="enrich every simulated account")
+    s.add_argument("--file", default=str(DEFAULT_SIM))
+    s.add_argument("--limit", type=int, default=200)
+    s.add_argument("--force", action="store_true", help="skip the cache and look up again")
+    s.add_argument("--url", default=None)
+    s.set_defaults(fn=cmd_enrich_backfill)
+
+    s = sub.add_parser("enrich-costs", help="show what enrichment has cost so far")
+    s.add_argument("--url", default=None)
+    s.set_defaults(fn=cmd_enrich_costs)
 
     s = sub.add_parser("check", help="test the HubSpot and Salesforce connections")
     s.set_defaults(fn=cmd_check)

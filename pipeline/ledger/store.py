@@ -36,7 +36,8 @@ class LedgerStore:
         raise NotImplementedError
 
     def _records(self, *, chain: str | None = None, account_id: str | None = None,
-                 person_id: str | None = None, event_ids: list[str] | None = None) -> list[dict]:
+                 person_id: str | None = None, event_ids: list[str] | None = None,
+                 type: str | None = None) -> list[dict]:
         raise NotImplementedError
 
     def _pii(self, event_ids: list[str]) -> dict[str, dict]:
@@ -171,6 +172,12 @@ class LedgerStore:
         recs.sort(key=lambda r: (r["occurred_at"], r["chain"], r["seq"]))
         return self._view(recs)
 
+    def events_of_type(self, type: str) -> list[dict]:
+        """Every event of one type, across accounts, oldest first."""
+        recs = self._records(type=type)
+        recs.sort(key=lambda r: (r["occurred_at"], r["chain"], r["seq"]))
+        return self._view(recs)
+
     def get_content(self, content_id: str) -> dict:
         c = self._content([content_id]).get(content_id)
         if not c:
@@ -212,11 +219,13 @@ class MemoryStore(LedgerStore):
             self.pii[rec["event_id"]] = pii
         return rec
 
-    def _records(self, *, chain=None, account_id=None, person_id=None, event_ids=None):
+    def _records(self, *, chain=None, account_id=None, person_id=None, event_ids=None,
+                 type=None):
         if event_ids is not None:
             return [self.events[i] for i in event_ids if i in self.events]
         return [r for r in self.events.values()
                 if (chain is None or r["chain"] == chain)
+                and (type is None or r["type"] == type)
                 and (account_id is None or r["account_id"] == account_id)
                 and (person_id is None or r["person_id"] == person_id)]
 
