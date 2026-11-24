@@ -43,4 +43,12 @@ Before starting the tunnel, set `INTAKE_SHARED_SECRET` in `.env` and restart `le
    - Authentication: API key in a header named `X-Intake-Key`, value = your `INTAKE_SHARED_SECRET`.
    - Request body: customize it and send these properties under these names: `hs_object_id` (Record ID), `email`, `firstname`, `lastname`, `jobtitle`, `company`, `recent_conversion_event_name`, `recent_conversion_date`, `hs_analytics_source`, `ledger_person_id`.
    - Turn the workflow on.
-3. Fill in the form from its share link and watch the n8n execution, then the customer's timeline at `http://127.0.0.1:8800/customers/<account_id>/timeline`.
+3. Fill in the form from its share link (preview mode doesn't submit) and watch the n8n execution, then the customer's timeline at `http://127.0.0.1:8800/customers/<account_id>/timeline`.
+
+### Gotchas
+
+- **HubSpot forms reject `example.com` emails** because the domain can't receive mail. Test with a plus address on a real inbox (`you+lead1@gmail.com`). A personal domain lands in an account of one (`acc_hs_<contact id>`).
+- **"Can't be turned on because it was created by another app."** A workflow made by an app is locked to that app. Clone it (Workflows list > ... > Clone) or build it from scratch so you own it, re-enter the `X-Intake-Key` secret, and turn the copy on.
+- **The webhook Test button works while the workflow is off**, so a passing test doesn't mean it's on. Check the Status column in the Workflows list.
+- **Nothing in Action logs** means the contact was never enrolled: the workflow is off, the trigger names another form, or the fill came before it was turned on.
+- **The tunnel URL changes** every time the tunnel restarts. Update the webhook URL in HubSpot when it does.
