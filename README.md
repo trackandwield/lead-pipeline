@@ -48,7 +48,7 @@ uv run python -m pipeline ledger-verify        # check every account's hash chai
 
 ### Intake (HubSpot form fill to the ledger)
 
-`docker compose up -d` also starts n8n at http://localhost:5678. Import `n8n/workflows/lead-intake.json`, activate it, and run `uv run python -m pipeline intake-test` to send a fake form fill through it. HubSpot and Cloudflare tunnel setup: [docs/intake.md](docs/intake.md).
+`docker compose up -d` also starts n8n at http://localhost:5678. Start the API with `ledger-serve --host 0.0.0.0` so n8n (inside Docker) can reach it. Import `n8n/workflows/lead-intake.json`, activate it, and run `uv run python -m pipeline intake-test` to send a fake form fill through it. HubSpot and Cloudflare tunnel setup: [docs/intake.md](docs/intake.md).
 
 Open `http://127.0.0.1:8800/customers/acc_00007/timeline` to see one customer's timeline. To run the ledger tests against Postgres as well as in memory, set `LEDGER_TEST_DATABASE_URL` to a scratch database (the tests drop and recreate its tables).
 
